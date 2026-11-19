@@ -160,12 +160,15 @@ button {
   border-radius: 999px;
   background: color-mix(in oklch, var(--line, #d9dce5) 45%, transparent);
   color: var(--muted, #5d6475);
+  box-sizing: border-box;
+  /* A badge wider than its card wraps at words, so nothing is cut. */
+  max-width: 100%;
   font-size: 12px;
   font-weight: 600;
-  white-space: nowrap;
 }
 
 .pill.dot::before {
+  flex: none;
   content: "";
   width: 7px;
   height: 7px;

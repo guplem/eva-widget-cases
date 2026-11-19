@@ -39,7 +39,7 @@ test.beforeEach(async ({ page }) => {
   await fakeEvaCases(page, evaCases);
 });
 
-for (const width of [180, 203, 240, 300]) {
+for (const width of [150, 180, 203, 240, 300]) {
   for (const height of [300, 400, 520]) {
     test(`a tall card of ${String(width)} x ${String(height)} wraps each title at words, with no overlap`, async ({
       page,
