@@ -1,38 +1,18 @@
 {
-  "contract": 1,
+  "contract": 2,
   "name": "Cases",
   "entry": "index.html",
-  "size": "medium",
+  "size": "tall",
   "inputs": [
     {
-      "id": "title",
-      "type": "text",
-      "label": "Title",
-      "description": "The title at the top of the widget.",
-      "why": "The widget shows it as its heading.",
-      "required": false,
-      "default": "Habits"
-    },
-    {
-      "id": "habits",
-      "type": "folder",
-      "label": "Habits folder",
-      "description": "The folder with one file for each habit, such as meditate.json.",
-      "why": "The widget shows your habits, and saves a check when you mark a habit done today.",
-      "required": true,
-      "access": "write",
-      "schema": "schemas/habits.json",
-      "files": "*.json"
-    },
-    {
-      "id": "location",
-      "type": "eva-location",
-      "label": "Location",
-      "description": "Your last location, from your phone.",
-      "why": "The widget shows near which place you check your habits.",
-      "required": false
+      "id": "cases",
+      "type": "eva-cases",
+      "label": "Cases",
+      "description": "Your open cases, from the Cases page of Eva.",
+      "why": "The widget shows your open cases, the most urgent first, with the next step and the nearest date of each.",
+      "required": true
     }
   ],
   "hosts": [],
-  "prompt": "Habits live in {habits}, one JSON file for each habit. Before you create a habit file, ask the person once."
+  "prompt": "The Cases widget shows each open case on the home page, with its next step, the day that step is due and the deadline. Keep them current in the note of each case."
 }
