@@ -103,14 +103,19 @@ button {
   background: var(--chip, #eef0f5);
 }
 
+/*
+ * In a narrow card, the badge goes on its own line under the title. Otherwise a long badge, such
+ * as "Overdue by 12 days", squeezes the title to one letter per line.
+ */
 .case-top {
   display: flex;
+  flex-wrap: wrap;
   align-items: flex-start;
-  gap: 8px;
+  gap: 4px 8px;
 }
 
 .case-title {
-  flex: 1;
+  flex: 1 1 7em;
   min-width: 0;
   font-size: 14px;
   overflow-wrap: anywhere;
