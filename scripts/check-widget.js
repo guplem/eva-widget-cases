@@ -33,6 +33,12 @@ async function contractFile(name) {
   const folder = process.env.EVA_CONTRACT_DIR;
   if (folder !== undefined && folder !== "") return JSON.parse(await readFile(join(folder, name), "utf8"));
   const response = await fetch(`${contractAddress}/${name}`);
+  // Contract 2 is not on Eva's main yet. Until it is, the copy in contract/ answers. Delete that
+  // folder when Eva's main has the file.
+  if (response.status === 404) {
+    const local = await readText(fileURLToPath(new URL(`../contract/${name}`, import.meta.url)));
+    if (local !== null) return JSON.parse(local);
+  }
   if (!response.ok) throw new Error(`Could not read ${name} of the widget contract (HTTP ${String(response.status)}).`);
   return response.json();
 }
