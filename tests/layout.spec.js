@@ -31,6 +31,9 @@ const evaCases = [
   },
 ];
 
+/** The free corner of the widget contract: 56 px wide and 56 px high, at the top right. */
+const corner = 56;
+
 test.beforeEach(async ({ page }) => {
   await fixToday(page, "2026-03-10");
   await fakeEvaCases(page, evaCases);
@@ -76,6 +79,68 @@ for (const width of [180, 203, 240, 300]) {
         return found;
       });
       expect(problems).toEqual([]);
+    });
+  }
+}
+
+const frames = [
+  { width: 160, height: 160 },
+  { width: 180, height: 300 },
+  { width: 203, height: 400 },
+  { width: 240, height: 520 },
+  { width: 390, height: 168 },
+  { width: 390, height: 824 },
+  { width: 800, height: 400 },
+  { width: 1280, height: 800 },
+];
+
+for (const size of ["small", "medium", "large", "tall", "xlarge", "full"]) {
+  for (const frame of frames) {
+    test(`size ${size} keeps the top right corner free at ${String(frame.width)} x ${String(frame.height)}`, async ({
+      page,
+    }) => {
+      await page.setViewportSize(frame);
+      await page.goto(`/?size=${size}`);
+      await expect(page.locator(".widget")).toHaveAttribute("data-ready", "true");
+      const inCorner = await page.evaluate((side) => {
+        const area = { left: window.innerWidth - side, right: window.innerWidth, top: 0, bottom: side };
+        const hits = (rect) =>
+          rect.width > 0 &&
+          rect.height > 0 &&
+          rect.left < area.right &&
+          // Half a pixel of rounding is not an overlap.
+          rect.right > area.left + 0.5 &&
+          rect.top < area.bottom - 0.5 &&
+          rect.bottom > area.top;
+        // What a box shows: an ancestor that hides its overflow, such as a cut summary, clips it.
+        const shown = (rect, node) => {
+          let { left, right, top, bottom } = rect;
+          for (let parent = node.parentElement; parent !== null; parent = parent.parentElement) {
+            if (getComputedStyle(parent).overflow === "visible") continue;
+            const clip = parent.getBoundingClientRect();
+            left = Math.max(left, clip.left);
+            right = Math.min(right, clip.right);
+            top = Math.max(top, clip.top);
+            bottom = Math.min(bottom, clip.bottom);
+          }
+          return { left, right, top, bottom, width: right - left, height: bottom - top };
+        };
+        const found = [];
+        const walker = document.createTreeWalker(document.querySelector(".widget"), NodeFilter.SHOW_TEXT);
+        while (walker.nextNode()) {
+          const node = walker.currentNode;
+          if (node.textContent.trim() === "") continue;
+          const range = document.createRange();
+          range.selectNodeContents(node);
+          if ([...range.getClientRects()].some((rect) => hits(shown(rect, node)))) found.push(node.textContent.trim());
+        }
+        for (const part of document.querySelectorAll(".widget .pill, .widget button, .widget svg, .widget progress")) {
+          if (hits(shown(part.getBoundingClientRect(), part)))
+            found.push(`a ${part.getAttribute("class") ?? part.tagName}`);
+        }
+        return found;
+      }, corner);
+      expect(inCorner).toEqual([]);
     });
   }
 }

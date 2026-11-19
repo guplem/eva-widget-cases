@@ -20,23 +20,31 @@ button {
 }
 
 .widget {
+  /* The widget contract keeps this square at the top right free: Eva puts her buttons there. */
+  --corner: 56px;
+  --pad: clamp(8px, 3vmin, 24px);
+  --gap: clamp(4px, 1.5vmin, 14px);
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
-  gap: clamp(4px, 1.5vmin, 14px);
+  gap: var(--gap);
   width: 100vw;
   height: 100vh;
-  padding: clamp(8px, 3vmin, 24px);
+  padding: var(--pad);
   overflow: hidden;
   background: var(--panel, #ffffff);
 }
 
 .widget-header {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   gap: 4px 12px;
-  /* The top right corner stays free: Eva puts her full-screen button there. */
-  padding-right: 40px;
+  /*
+   * The header fills the free corner, so the body starts below it, and the count ends at its left
+   * edge. Eva's full-screen button, or her close button in full screen, sits in that corner.
+   */
+  min-height: calc(var(--corner) - var(--pad) - var(--gap));
+  padding-right: calc(var(--corner) - var(--pad));
 }
 
 .widget-title {
