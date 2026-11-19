@@ -23,7 +23,6 @@ This repository is a widget for Eva's home page: a small web page that Eva shows
 - Keep Eva's order of the cases. Never sort them in the widget.
 - Write each date of `example/cases.json` as `today`, `today+N` or `today-N`. The widget counts it from today, so the demo always shows a late step.
 - Fix the clock with `fixToday` of `tests/helpers.js` in each test that depends on today.
-- `contract/` holds the schema files of contract 2 until Eva's `main` has them. Then delete the folder: `scripts/check-widget.js` reads it only when Eva answers 404.
 
 ## Checks
 
