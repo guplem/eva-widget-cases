@@ -14,99 +14,335 @@ body {
   font-family: system-ui, sans-serif;
 }
 
+button {
+  font: inherit;
+  color: inherit;
+}
+
 .widget {
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
-  gap: clamp(4px, 2vmin, 16px);
+  gap: clamp(4px, 1.5vmin, 14px);
   width: 100vw;
   height: 100vh;
-  padding: clamp(8px, 3vmin, 32px);
+  padding: clamp(8px, 3vmin, 24px);
   overflow: hidden;
   background: var(--panel, #ffffff);
 }
 
 .widget-header {
   display: flex;
-  flex-wrap: wrap;
   align-items: baseline;
-  justify-content: space-between;
   gap: 4px 12px;
+  /* The top right corner stays free: Eva puts her full-screen button there. */
+  padding-right: 40px;
 }
 
 .widget-title {
+  flex: none;
   margin: 0;
-  font-size: clamp(16px, 6vmin, 40px);
+  font-size: clamp(15px, 5vmin, 28px);
 }
 
-.widget-summary,
-.widget-location,
-.widget-note {
-  margin: 0;
-  color: var(--muted, #5d6475);
-  font-size: clamp(12px, 3.5vmin, 22px);
-}
-
-.widget-note {
-  color: var(--warn, #9a6b00);
-}
-
-.habit-list {
-  display: grid;
+.widget-summary {
   flex: 1;
-  grid-auto-rows: minmax(2.5em, 1fr);
-  gap: clamp(4px, 1.5vmin, 12px);
+  min-width: 0;
+  margin: 0;
+  overflow: hidden;
+  text-align: right;
+  text-overflow: ellipsis;
+  color: var(--muted, #5d6475);
+  font-size: clamp(12px, 3vmin, 16px);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.widget-body {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.icon {
+  flex: none;
+  width: 1.1em;
+  height: 1.1em;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* --- The list of cases ------------------------------------------------------------------------- */
+
+.cases {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 6px;
   min-height: 0;
   margin: 0;
   padding: 0;
+  /* A list that does not fit scrolls inside the widget, never sideways. */
+  overflow-x: hidden;
   overflow-y: auto;
   list-style: none;
 }
 
-.habit {
+.case {
   display: flex;
+  flex: none;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+  padding: 8px 12px;
+  border-radius: 14px;
+  background: var(--chip, #eef0f5);
 }
 
-.habit-check {
+.case-top {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.case-title {
   flex: 1;
-  padding: 0 1em;
-  border: 1px solid var(--line, #d9dce5);
-  border-radius: 12px;
+  min-width: 0;
+  font-size: 14px;
+  overflow-wrap: anywhere;
+}
+
+.line {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  color: var(--muted, #5d6475);
+  font-size: 12.5px;
+  font-weight: 600;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+}
+
+.line .icon {
+  margin-top: 1px;
+}
+
+.line.none {
+  font-style: italic;
+  font-weight: 400;
+}
+
+/* --- The pill of a day: a word and a shape, never a colour alone ------------------------------- */
+
+.pill {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 9px;
+  border-radius: 999px;
+  background: color-mix(in oklch, var(--line, #d9dce5) 45%, transparent);
+  color: var(--muted, #5d6475);
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.pill.dot::before {
+  content: "";
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.pill .icon {
+  width: 13px;
+  height: 13px;
+}
+
+/*
+ * A late step: it waits for the person. Mixed with the ink, so small text keeps its contrast. Oklab
+ * mixes in a straight line, so the hue stays near the warn colour.
+ */
+.pill.warn {
+  background: var(--warn-bg, #fdf3d8);
+  color: color-mix(in oklab, var(--warn, #9a6b00) 70%, var(--ink, #1f2430));
+}
+
+/* A passed deadline: something is lost. */
+.pill.bad {
+  background: var(--bad-bg, #fbe9e7);
+  color: var(--bad, #c0392b);
+}
+
+.pills,
+.deadline-group {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
+}
+
+.cost {
+  color: var(--muted, #5d6475);
+  font-size: 12.5px;
+}
+
+/* --- Large, extra large and full: every part of each case -------------------------------------- */
+
+.cases.detailed {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 260px), 1fr));
+  align-content: start;
+  gap: 8px;
+}
+
+.cases.detailed .case {
+  gap: 6px;
+  padding: 12px 14px;
+}
+
+.cases.detailed .case-title {
+  font-size: 15px;
+}
+
+.steps {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--muted, #5d6475);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.steps progress {
+  flex: 1;
+  max-width: 140px;
+  height: 6px;
+  border: none;
+  border-radius: 999px;
+  background: var(--line, #d9dce5);
+  overflow: hidden;
+  appearance: none;
+}
+
+.steps progress::-webkit-progress-bar {
+  background: var(--line, #d9dce5);
+}
+
+.steps progress::-webkit-progress-value {
+  border-radius: 999px;
+  background: var(--accent, #3b82f6);
+}
+
+.steps progress::-moz-progress-bar {
+  border-radius: 999px;
+  background: var(--accent, #3b82f6);
+}
+
+/* --- Small: the most urgent case fills the card ------------------------------------------------ */
+
+.focus {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  justify-content: center;
+  gap: clamp(3px, 1.5vmin, 10px);
+  min-height: 0;
+  overflow: hidden;
+}
+
+.focus .case-title {
+  flex: none;
+  font-size: clamp(14px, 6vmin, 30px);
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow: hidden;
+}
+
+.focus .step span {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow: hidden;
+}
+
+.focus .more {
+  margin-top: auto;
+  color: var(--muted, #5d6475);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+/* --- A state with no case ---------------------------------------------------------------------- */
+
+.empty {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 0;
+  padding: 8px;
+  border-radius: 14px;
   background: var(--chip, #eef0f5);
-  color: inherit;
-  font: inherit;
-  font-size: clamp(14px, 4vmin, 28px);
-  text-align: left;
+  text-align: center;
+  overflow-y: auto;
+}
+
+.empty .icon {
+  width: 26px;
+  height: 26px;
+  color: var(--muted, #5d6475);
+}
+
+.empty.failed .icon {
+  color: var(--bad, #c0392b);
+}
+
+.empty strong {
+  font-size: 14px;
+}
+
+.empty p {
+  max-width: 34em;
+  margin: 0;
+  color: var(--muted, #5d6475);
+  font-size: 12.5px;
+  line-height: 1.4;
+}
+
+.retry {
+  min-height: 36px;
+  padding: 6px 14px;
+  border: none;
+  border-radius: 999px;
+  background: var(--accent, #3b82f6);
+  color: var(--on-accent, #ffffff);
+  font-weight: 600;
   cursor: pointer;
 }
 
-.habit-check[aria-pressed="true"] {
-  border-color: var(--accent, #3b82f6);
-  background: var(--accent, #3b82f6);
-  color: var(--on-accent, #ffffff);
-}
-
-/* Small: the count fills the card, with no list. */
-.widget[data-size="small"] .habit-list {
+/* In a small card, the text of a state takes the space that the icon would take. */
+.widget[data-size="small"] .empty .icon {
   display: none;
 }
 
-.widget[data-size="small"] .widget-header {
-  flex: 1;
-  flex-direction: column;
-  align-items: flex-start;
-  justify-content: center;
+/* Full screen has the room for bigger text. */
+.widget[data-size="full"] .case-title {
+  font-size: 17px;
 }
 
-.widget[data-size="small"] .widget-summary {
-  color: var(--ink, #1f2430);
-  font-size: clamp(16px, 9vmin, 48px);
-}
-
-/* Large and full: the list takes two columns when the space is wide. */
-@media (min-aspect-ratio: 3/2) {
-  .widget[data-size="large"] .habit-list,
-  .widget[data-size="full"] .habit-list {
-    grid-template-columns: repeat(2, 1fr);
-  }
+.widget[data-size="full"] .line,
+.widget[data-size="full"] .cost {
+  font-size: 14px;
 }

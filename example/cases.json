@@ -1,0 +1,42 @@
+[
+  {
+    "id": "fix-the-bathroom-leak",
+    "title": "Fix the bathroom leak",
+    "nextStep": { "text": "Confirm the date with the plumber", "waitingFor": "plumber", "dueDate": "today-1" },
+    "deadline": { "date": "today+12", "cost": "Water damage to the flat below" },
+    "stepsDone": 2,
+    "stepsTotal": 5
+  },
+  {
+    "id": "renew-the-car-insurance",
+    "title": "Renew the car insurance",
+    "nextStep": { "text": "Compare the two quotes", "waitingFor": null, "dueDate": "today+1" },
+    "deadline": { "date": "today+9", "cost": "The car has no insurance" },
+    "stepsDone": 1,
+    "stepsTotal": 3
+  },
+  {
+    "id": "tax-return",
+    "title": "Tax return",
+    "nextStep": { "text": "Send the receipts to the accountant", "waitingFor": "accountant", "dueDate": "today+5" },
+    "deadline": { "date": "today+40", "cost": "A late fee of 100 EUR" },
+    "stepsDone": 3,
+    "stepsTotal": 6
+  },
+  {
+    "id": "move-to-the-new-flat",
+    "title": "Move to the new flat",
+    "nextStep": { "text": "Book the van", "waitingFor": null, "dueDate": "today+20" },
+    "deadline": { "date": "today+30", "cost": null },
+    "stepsDone": null,
+    "stepsTotal": null
+  },
+  {
+    "id": "refund-for-a-cancelled-flight",
+    "title": "Refund for a cancelled flight",
+    "nextStep": { "text": "Wait for the answer of the airline", "waitingFor": "airline", "dueDate": null },
+    "deadline": null,
+    "stepsDone": 2,
+    "stepsTotal": 4
+  }
+]

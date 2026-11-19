@@ -1,4 +1,4 @@
-// The schema check of scripts/check-widget.js, on a copy of this widget with one change.
+// The contract check of scripts/check-widget.js, on a copy of this widget with one change.
 import { cp, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -14,17 +14,15 @@ after(async () => {
   await Promise.all(copies.map((folder) => rm(folder, { recursive: true, force: true })));
 });
 
-/** A copy of the widget files that the check reads, with `change` applied to the habits schema. */
+/** A copy of the widget files that the check reads, with `change` applied to the manifest. */
 async function copyWith(change) {
   const folder = await mkdtemp(join(tmpdir(), "widget-"));
   copies.push(folder);
-  for (const path of ["eva-widget.json", "config.json", "schemas", "data"]) {
-    await cp(join(widget, path), join(folder, path), { recursive: true });
-  }
-  const path = join(folder, "schemas", "habits.json");
-  const schema = JSON.parse(await readFile(path, "utf8"));
-  change(schema);
-  await writeFile(path, JSON.stringify(schema));
+  for (const path of ["eva-widget.json", "config.json"]) await cp(join(widget, path), join(folder, path));
+  const path = join(folder, "eva-widget.json");
+  const manifest = JSON.parse(await readFile(path, "utf8"));
+  change(manifest);
+  await writeFile(path, JSON.stringify(manifest));
   return folder;
 }
 
@@ -32,27 +30,29 @@ test("the widget follows the contract", async () => {
   assert.deepEqual(await checkWidget(widget), []);
 });
 
-test("an abbreviation fails, with its name", async () => {
-  const folder = await copyWith((schema) => {
-    schema.properties.loc = { type: "string" };
+test("an unknown size fails", async () => {
+  const folder = await copyWith((manifest) => {
+    manifest.size = "huge";
   });
-  assert.deepEqual(await checkWidget(folder), [
-    'schemas/habits.json: the field name "loc" breaks the naming rules (camelCase, full English words, no abbreviation).',
-  ]);
+  assert.match((await checkWidget(folder))[0], /\/size/);
 });
 
-test("a name that is not camelCase fails, with its name", async () => {
-  const folder = await copyWith((schema) => {
-    schema.properties.my_field = { type: "string" };
+test("the cases input takes no access: it only reads", async () => {
+  const folder = await copyWith((manifest) => {
+    manifest.inputs[0].access = "write";
   });
-  const problems = await checkWidget(folder);
-  assert.equal(problems.length, 1);
-  assert.match(problems[0], /"my_field"/);
+  assert.notDeepEqual(await checkWidget(folder), []);
 });
 
-test("a closed object fails", async () => {
-  const folder = await copyWith((schema) => {
-    schema.additionalProperties = false;
+test("the cases input takes no default", async () => {
+  const folder = await copyWith((manifest) => {
+    manifest.inputs[0].default = "Life/Cases";
   });
-  assert.match((await checkWidget(folder))[0], /closes the object/);
+  assert.notDeepEqual(await checkWidget(folder), []);
+});
+
+test("a key of config.json that is no input fails", async () => {
+  const folder = await copyWith(() => {});
+  await writeFile(join(folder, "config.json"), JSON.stringify({ title: "Cases" }));
+  assert.deepEqual(await checkWidget(folder), ['config.json: "title" is not an input.']);
 });
