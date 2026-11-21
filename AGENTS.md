@@ -6,9 +6,10 @@ This repository is a widget for Eva's home page: a small web page that Eva shows
 
 - **This repository is public, and holds no data of a person.** It holds only mock data for the tests and the demo. Never write a name of a private person, a real data value, a token or a home path.
 - **Plain, standard web code.** HTML, JavaScript and CSS, with no framework and no build step. A browser loads the files as they are.
-- **The widget talks to its host only through `fetch` to relative paths** of the contract: `config.json`, `eva/cases.json` and `eva/theme.css`.
+- **The widget talks to its host only through `fetch` to relative paths** of the contract: `config.json`, `eva/cases.json` and `eva/theme.css`, **and through the asks of contract 3** (`asks.js`): `hello`, `chat` and `open`, by `postMessage` to its parent window, right in the click handler of a tap.
 - **The widget works outside Eva,** on GitHub Pages and with `npm start`. There, `eva/cases.json` answers 404, and the widget shows `example/cases.json`.
-- **The widget only reads.** Eva owns the cases. Add an input, a write or a host only with the owner.
+- **The widget only reads.** Eva owns the cases. Add an input, a write, a host or an ask only with the owner. A change to a case, such as "Mark the step as done…", goes through a `chat` ask: the person sends the text, and Eva changes the case.
+- **Outside Eva, no ask works.** With no answer to `hello` in about 400 ms, or an ask that the person did not allow, the widget hides its entries, and a case with no entry left is not a button.
 
 ## Rules
 
@@ -18,9 +19,11 @@ This repository is a widget for Eva's home page: a small web page that Eva shows
 - A pull request that adds or widens a permission of `eva-widget.json` says so in its body: a new input, a write access, the location, or a host.
 - Keep the mock files in line with the code: `config.json`, `example/cases.json` and `eva/theme.css`.
 - Keep `tests/fills-screen.spec.js`: the widget fills the space that it gets, at every size.
-- Keep the words of a case in `cases.js`, with no page code, so `tests/cases.test.js` runs them in Node.
+- Keep the words of a case in `cases.js`, with no page code, so `tests/cases.test.js` runs them in Node: also the texts of the asks, the entries of the menu, the statistics and the groups.
+- Keep the menu inside the frame and off the free corner of 56 px at the top right. `tests/menu.spec.js` opens the widget in a fake Eva (`openInFakeEva` of `tests/helpers.js`) that answers the asks.
+- A statistic comes only from a field that Eva sends. Never invent a field.
 - Use the words and the tones of Eva's Cases page (`src/frontends/web/client/life-pages.ts` in Eva). A late step takes the warn colour: it waits for the person. Only a passed deadline takes the bad colour. Each state has a word and a shape, never a colour alone.
-- Keep Eva's order of the cases. Never sort them in the widget.
+- Keep Eva's order of the cases. Never sort them in the widget. The grouping "By who it waits for" of the large sizes keeps Eva's order inside each group.
 - Write each date of `example/cases.json` as `today`, `today+N` or `today-N`. The widget counts it from today, so the demo always shows a late step.
 - Fix the clock with `fixToday` of `tests/helpers.js` in each test that depends on today.
 

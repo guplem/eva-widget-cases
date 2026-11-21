@@ -5,7 +5,7 @@ export default [
   { ignores: ["node_modules/", "test-results/", "playwright-report/", ".pskill/", ".agents/", ".claude/"] },
   js.configs.recommended,
   {
-    files: ["main.js", "cases.js"],
+    files: ["main.js", "cases.js", "asks.js"],
     languageOptions: { globals: globals.browser },
   },
   {

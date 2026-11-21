@@ -2,16 +2,21 @@
 // eva/cases.json with the person's open cases. On GitHub Pages, that path answers 404, so the
 // widget shows the mock cases of example/cases.json. See the contract:
 // https://github.com/guplem/eva/blob/main/docs/widgets.md
+import { ask, hello } from "./asks.js";
 import {
+  caseStats,
   casesOf,
   countOf,
   deadlineState,
   dueState,
+  groupCases,
+  menuEntries,
   pillOf,
   resolveExampleDates,
   stepsWords,
   summaryWords,
   todayText,
+  waitsForMe,
 } from "./cases.js";
 
 const sizes = ["small", "medium", "large", "tall", "xlarge", "full"];
@@ -21,6 +26,18 @@ const refreshMs = 10 * 60 * 1000;
 const noCasesText =
   "A case is a matter with a start and an end, such as a claim, a refund or a move. Ask Eva in a chat to open one.";
 const noOpenCasesText = "Each case is closed. Ask Eva in a chat to open a new one when something comes up.";
+
+/** What a refused ask means for the person. */
+const refusalText = {
+  "not-allowed": "Eva does not allow this yet. Allow it in the widget's settings in Eva.",
+  "no-tap": "Eva needs a tap for this. Try again.",
+  "too-long": "The text is too long for Eva's message box.",
+  "not-found": "Eva could not find this case.",
+};
+const noAnswerText = "Eva did not answer. Try again.";
+/** The square at the top right that the widget contract keeps free for Eva's buttons. */
+const corner = 56;
+const menuMargin = 8;
 
 const root = document.querySelector(".widget");
 const summaryElement = root.querySelector('[data-role="summary"]');
@@ -33,7 +50,16 @@ const icons = {
   user: ["M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8z", "M4 21c1-4 4-6 8-6s7 2 8 6"],
   folder: ["M3 6h6l2 2h10v11H3z"],
   check: ["M5 12l5 5L20 7"],
+  open: ["M14 4h6v6", "M20 4l-9 9", "M18 14v6H4V6h6"],
+  chat: ["M4 5h16v11H9l-5 4z"],
+  spark: ["M12 3v5M12 16v5M3 12h5M16 12h5", "M6 6l3 3M15 15l3 3M6 18l3-3M15 9l3-3"],
 };
+
+/**
+ * The state of the page: Eva's last answer, the asks that the person allowed, and the choices of
+ * the large sizes. The choices stay in memory: a reload starts again from Eva's order.
+ */
+const state = { result: null, allowed: [], group: "urgency", mineOnly: false };
 
 function icon(name) {
   const namespace = "http://www.w3.org/2000/svg";
@@ -114,11 +140,14 @@ function stepLine(item) {
 /** A case of the list of a tall or medium card: title, the nearest day and the next step. */
 function shortCase(item, today) {
   const day = pillOf(item, today);
-  return element(
-    "li",
-    "case",
-    element("span", "case-top", element("b", "case-title", item.title), day === null ? null : pill(day)),
-    stepLine(item),
+  return withMenu(
+    element(
+      "li",
+      "case",
+      element("span", "case-top", element("b", "case-title", item.title), day === null ? null : pill(day)),
+      stepLine(item),
+    ),
+    item,
   );
 }
 
@@ -140,7 +169,10 @@ function fullCase(item, today) {
     parts.push(line("forward", "step none", "No next step"));
   } else {
     parts.push(line("forward", "step", item.nextStep.text));
-    if (item.nextStep.waitingFor !== null) parts.push(line("user", "waits", `Waits for ${item.nextStep.waitingFor}`));
+    const who = item.nextStep.waitingFor;
+    parts.push(
+      line("user", who === null ? "waits mine" : "waits", who === null ? "Waits for you" : `Waits for ${who}`),
+    );
     const due = dueState(item.nextStep.dueDate, today);
     if (due !== null) days.push(pill(due));
   }
@@ -158,20 +190,23 @@ function fullCase(item, today) {
     );
   }
   if (days.length > 0) parts.push(element("span", "pills", ...days));
-  return element("li", "case", ...parts);
+  return withMenu(element("li", "case", ...parts), item);
 }
 
 /** The small card: the most urgent case, its next step and a count of the others. */
 function focusCase(cases, today) {
   const [first, ...rest] = cases;
   const day = pillOf(first, today);
-  return element(
-    "div",
-    "focus",
-    element("b", "case-title", first.title),
-    day === null ? null : element("span", "pills", pill(day)),
-    stepLine(first),
-    element("span", "more", rest.length === 0 ? "No other open case" : `${countOf(rest.length, "more case")}`),
+  return withMenu(
+    element(
+      "div",
+      "focus",
+      element("b", "case-title", first.title),
+      day === null ? null : element("span", "pills", pill(day)),
+      stepLine(first),
+      element("span", "more", rest.length === 0 ? "No other open case" : `${countOf(rest.length, "more case")}`),
+    ),
+    first,
   );
 }
 
@@ -180,9 +215,262 @@ function emptyState(title, text) {
   return element("div", "empty", icon("folder"), element("strong", "", title), element("p", "", text));
 }
 
-function render(result) {
+// --- The menu of a case ---------------------------------------------------------------------------
+
+/**
+ * Makes the whole case a button that opens its menu, when Eva allows an entry for it. With no
+ * entry, as outside Eva, the case stays plain text.
+ */
+function withMenu(container, item) {
+  const entries = menuEntries(item, state.allowed);
+  if (entries.length === 0) return container;
+  const button = element("button", "case-button", ...container.childNodes);
+  button.type = "button";
+  button.setAttribute("aria-haspopup", "menu");
+  button.setAttribute("aria-expanded", "false");
+  button.addEventListener("click", (event) => {
+    // A click from the keyboard has no pointer: the menu goes under the case.
+    const point = event.detail > 0 ? { x: event.clientX, y: event.clientY } : null;
+    if (button.getAttribute("aria-expanded") === "true") closeMenu();
+    else openMenu(button, item, entries, point);
+  });
+  container.classList.add("has-menu");
+  container.append(button);
+  return container;
+}
+
+let openState = null;
+
+function closeMenu({ refocus = false } = {}) {
+  if (openState === null) return;
+  const { menu, button } = openState;
+  openState = null;
+  menu.remove();
+  button.setAttribute("aria-expanded", "false");
+  if (refocus && button.isConnected) button.focus();
+}
+
+/**
+ * The place of the menu: at the tap, or under the case from the keyboard. It stays inside the
+ * frame, and off the free corner at the top right.
+ */
+function placeMenu(menu, button, point) {
+  const width = window.innerWidth;
+  const height = window.innerHeight;
+  const box = menu.getBoundingClientRect();
+  const row = button.getBoundingClientRect();
+  const anchor = point ?? { x: row.left + 12, y: row.bottom };
+  const clamp = (value, low, high) => Math.max(low, Math.min(value, high));
+  let left = clamp(anchor.x - 12, menuMargin, width - box.width - menuMargin);
+  let top = anchor.y + 4;
+  if (top + box.height > height - menuMargin) top = (point === null ? row.top : anchor.y) - box.height - 4;
+  top = clamp(top, menuMargin, height - box.height - menuMargin);
+  if (top < corner && left + box.width > width - corner) {
+    if (width - corner - box.width >= menuMargin) {
+      left = width - corner - box.width;
+    } else {
+      // A card too narrow for the menu beside the corner: the menu goes under it, and scrolls.
+      top = corner;
+      menu.style.setProperty("max-height", `${String(height - corner - menuMargin)}px`);
+    }
+  }
+  // Set from the code, not in the markup: Eva's Content Security Policy allows it.
+  menu.style.setProperty("left", `${String(left)}px`);
+  menu.style.setProperty("top", `${String(top)}px`);
+}
+
+function openMenu(button, item, entries, point) {
+  closeMenu();
+  const menu = element("div", "menu");
+  menu.setAttribute("role", "menu");
+  menu.setAttribute("aria-label", item.title);
+  const entryIcons = { open: "open", chat: "chat", help: "spark", done: "check" };
+  const items = entries.map((entry) => {
+    const choice = element("button", "menu-item", icon(entryIcons[entry.id]), element("span", "", entry.label));
+    choice.type = "button";
+    choice.setAttribute("role", "menuitem");
+    choice.dataset.entry = entry.id;
+    choice.addEventListener("click", () => {
+      // The ask leaves in this click, so Eva sees the tap. Eva may move the focus to her message
+      // box, so the focus stays where Eva puts it.
+      const answer = ask(entry);
+      closeMenu();
+      void answer.then((result) => {
+        if (!result.ok) refused(entry.ask, result.reason);
+      });
+    });
+    return choice;
+  });
+  menu.append(...items);
+  menu.addEventListener("keydown", (event) => {
+    const index = items.indexOf(document.activeElement);
+    const moves = { ArrowDown: index + 1, ArrowUp: index - 1, Home: 0, End: items.length - 1 };
+    if (event.key in moves) {
+      event.preventDefault();
+      items[(moves[event.key] + items.length) % items.length].focus();
+    } else if (event.key === "Escape") {
+      event.preventDefault();
+      closeMenu({ refocus: true });
+    } else if (event.key === "Tab") {
+      closeMenu({ refocus: true });
+    }
+  });
+  root.append(menu);
+  placeMenu(menu, button, point);
+  button.setAttribute("aria-expanded", "true");
+  openState = { menu, button };
+  items[0].focus();
+}
+
+document.addEventListener("pointerdown", (event) => {
+  if (openState !== null && !openState.menu.contains(event.target) && !openState.button.contains(event.target)) {
+    closeMenu();
+  }
+});
+// The menu sits at a fixed place, so it closes when the list under it moves.
+document.addEventListener(
+  "scroll",
+  (event) => {
+    if (openState !== null && !openState.menu.contains(event.target)) closeMenu();
+  },
+  true,
+);
+window.addEventListener("resize", () => closeMenu());
+
+let noticeTimer;
+
+/** A short note at the bottom of the widget, read by screen readers too. */
+function notice(text) {
+  let node = root.querySelector(".notice");
+  if (node === null) {
+    node = element("p", "notice");
+    node.setAttribute("role", "status");
+    root.append(node);
+  }
+  node.textContent = text;
+  node.hidden = false;
+  clearTimeout(noticeTimer);
+  noticeTimer = setTimeout(() => {
+    node.hidden = true;
+  }, 6000);
+}
+
+/** Eva refused an ask. A type that she does not allow leaves the menus. */
+function refused(type, reason) {
+  notice(reason === "no-answer" ? noAnswerText : (refusalText[reason] ?? noAnswerText));
+  if (reason === "not-allowed") {
+    state.allowed = state.allowed.filter((allowed) => allowed !== type);
+    render();
+  }
+}
+
+// --- The overview of the large sizes ----------------------------------------------------------------
+
+function stat(value, label, className = "") {
+  return element(
+    "li",
+    `stat${className === "" ? "" : ` ${className}`}`,
+    element("b", "stat-value", value),
+    element("span", "stat-label", label),
+  );
+}
+
+/** The statistics that help to pick what to do today. Only from the data that Eva sends. */
+function statsList(cases, today) {
+  const stats = caseStats(cases, today);
+  const count = (value) => String(value);
+  const parts = [
+    stat(count(stats.overdue), "Overdue", stats.overdue > 0 ? "warn" : "zero"),
+    stat(count(stats.dueSoon), "Due in 7 days", stats.dueSoon > 0 ? "" : "zero"),
+    stat(count(stats.waitsForMe), "Wait for me", stats.waitsForMe > 0 ? "" : "zero"),
+    stat(count(stats.waitsForOthers), "Wait for others", stats.waitsForOthers > 0 ? "" : "zero"),
+  ];
+  if (stats.nearestDeadline !== null) {
+    const { item, state: day } = stats.nearestDeadline;
+    parts.push(element("li", "stat nearest", pill(day), element("span", "stat-label", item.title)));
+  }
+  const list = element("ul", "stats", ...parts);
+  list.setAttribute("aria-label", "Today at a glance");
+  return list;
+}
+
+/** A button that stays pressed. `marked` adds a check when pressed, for a filter that stands alone. */
+function toggle(label, pressed, control, onPress, marked = false) {
+  const button = element("button", "toggle", pressed && marked ? icon("check") : null, element("span", "", label));
+  button.type = "button";
+  button.dataset.control = control;
+  button.setAttribute("aria-pressed", String(pressed));
+  button.addEventListener("click", () => {
+    onPress();
+    render();
+    root.querySelector(`[data-control="${control}"]`)?.focus();
+  });
+  return button;
+}
+
+/** The choices of the list: its grouping, and the filter "Waits for me". */
+function toolbar() {
+  const grouping = element(
+    "div",
+    "segmented",
+    toggle("By urgency", state.group === "urgency", "group-urgency", () => {
+      state.group = "urgency";
+    }),
+    toggle("By who it waits for", state.group === "waiting", "group-waiting", () => {
+      state.group = "waiting";
+    }),
+  );
+  grouping.setAttribute("role", "group");
+  grouping.setAttribute("aria-label", "Order of the cases");
+  return element(
+    "div",
+    "toolbar",
+    grouping,
+    toggle(
+      "Waits for me",
+      state.mineOnly,
+      "mine-only",
+      () => {
+        state.mineOnly = !state.mineOnly;
+      },
+      true,
+    ),
+  );
+}
+
+/** Every open case with all its parts, the statistics and the choices of the list. */
+function detailedView(cases, today) {
+  const shown = state.mineOnly ? cases.filter(waitsForMe) : cases;
+  const parts = [element("div", "overview", statsList(cases, today), toolbar())];
+  if (shown.length === 0) {
+    parts.push(element("p", "filtered-empty", "No next step waits for you now."));
+  }
+  for (const group of shown.length === 0 ? [] : groupCases(shown, state.group)) {
+    const list = element("ul", "cases detailed", ...group.cases.map((item) => fullCase(item, today)));
+    if (group.title === null) {
+      parts.push(list);
+    } else {
+      const heading = element(
+        "h2",
+        "group-title",
+        group.title,
+        element("span", "group-count", String(group.cases.length)),
+      );
+      parts.push(element("section", "group", heading, list));
+    }
+  }
+  return parts;
+}
+
+function render() {
+  const result = state.result;
+  closeMenu();
   const size = root.dataset.size;
   const today = todayText();
+  const detailed = detailedSizes.includes(size);
+  // A new read keeps the place of a list that the person scrolled.
+  const scrolled = [bodyElement, bodyElement.querySelector(".cases")].map((node) => node?.scrollTop ?? 0);
+  bodyElement.classList.remove("detailed");
   if (result.state === "failed") {
     summaryElement.textContent = "";
     const retry = element("button", "retry", "Try again");
@@ -216,18 +504,23 @@ function render(result) {
     bodyElement.replaceChildren(focusCase(cases, today));
     return;
   }
-  const detailed = detailedSizes.includes(size);
-  bodyElement.replaceChildren(
-    element(
-      "ul",
-      detailed ? "cases detailed" : "cases",
-      ...cases.map((item) => (detailed ? fullCase(item, today) : shortCase(item, today))),
-    ),
-  );
+  if (detailed) {
+    bodyElement.classList.add("detailed");
+    bodyElement.replaceChildren(...detailedView(cases, today));
+  } else {
+    bodyElement.replaceChildren(element("ul", "cases", ...cases.map((item) => shortCase(item, today))));
+  }
+  bodyElement.scrollTop = scrolled[0];
+  const list = bodyElement.querySelector(".cases");
+  if (list !== null) list.scrollTop = scrolled[1];
 }
 
 async function refresh() {
-  render(await loadCases());
+  // Eva may allow an ask between two reads, so the widget asks her again each time.
+  const [result, allowed] = await Promise.all([loadCases(), hello()]);
+  state.result = result;
+  state.allowed = allowed;
+  render();
   // Tests wait for this flag: every part of the widget has its content now.
   root.dataset.ready = "true";
 }

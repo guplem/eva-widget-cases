@@ -7,6 +7,7 @@
 const dayMs = 86_400_000;
 const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 const datePattern = /^(\d{4})-(\d{2})-(\d{2})$/;
+const casesFolder = "Life/Cases";
 const exampleDatePattern = /^today(?:([+-])(\d+))?$/;
 
 /**
@@ -138,6 +139,17 @@ function objectOrNull(value) {
 }
 
 /**
+ * The vault path of a case, for Eva's `open` ask. Eva sends `path` since contract 3. Before that,
+ * Eva's widget docs say that `id` is the folder name of the case in `Life/Cases`, so the path is
+ * built from it. An id that is not a plain folder name gives no path: Eva would refuse it anyway.
+ */
+function pathOf(path, id) {
+  if (path !== null) return path;
+  if (id === null || !/^[^/\\.][^/\\]*$/.test(id)) return null;
+  return `${casesFolder}/${id}`;
+}
+
+/**
  * Eva's answer as a list of cases, in Eva's order. Null when Eva has no cases folder. Undefined
  * when the answer is not a list. An item with no title goes: there is nothing to show for it.
  */
@@ -153,9 +165,10 @@ export function casesOf(answer) {
     const deadline = objectOrNull(item.deadline);
     const deadlineDate = textOrNull(deadline?.date);
     const cost = textOrNull(deadline?.cost);
+    const id = textOrNull(item.id);
     return [
       {
-        id: textOrNull(item.id) ?? title,
+        id: id ?? title,
         title,
         nextStep:
           stepText === null
@@ -164,6 +177,7 @@ export function casesOf(answer) {
         deadline: deadlineDate === null && cost === null ? null : { date: deadlineDate, cost },
         stepsDone: integerOrNull(item.stepsDone),
         stepsTotal: integerOrNull(item.stepsTotal),
+        path: pathOf(textOrNull(item.path), id),
       },
     ];
   });
@@ -193,4 +207,127 @@ export function resolveExampleDates(list, today) {
         ? item.deadline
         : { ...item.deadline, date: exampleDate(item.deadline.date, today) },
   }));
+}
+
+// --- The menu of a case: what the widget asks Eva to do -----------------------------------------
+
+/** The longest text of a `chat` ask that Eva takes (contract 3). */
+export const askTextLimit = 2000;
+
+/** A text cut to the limit of a chat ask, with an ellipsis when it is cut. */
+function clip(text) {
+  return text.length <= askTextLimit ? text : `${text.slice(0, askTextLimit - 1)}…`;
+}
+
+/** `"Fix the leak" (Life/Cases/leak)`: the case as a chat text names it. */
+function caseName(item) {
+  return item.path === null ? `"${item.title}"` : `"${item.title}" (${item.path})`;
+}
+
+/** The next step with who it waits for and its day: `Call the gym (waits for gym, due 9 Mar 2026)`. */
+function stepWithDetails(step) {
+  const details = [];
+  if (step.waitingFor !== null) details.push(`waits for ${step.waitingFor}`);
+  if (step.dueDate !== null) details.push(`due ${dayWords(step.dueDate)}`);
+  return details.length === 0 ? step.text : `${step.text} (${details.join(", ")})`;
+}
+
+/** The text of "Start a chat about this case": the title, the next step and the path. */
+export function chatAboutText(item) {
+  const step =
+    item.nextStep === null ? "It has no next step yet." : `The next step is: ${stepWithDetails(item.nextStep)}.`;
+  return clip(`Let us talk about my case ${caseName(item)}. ${step}`);
+}
+
+/** The text of "Ask Eva to do the next step". Null when the case has no next step. */
+export function nextStepHelpText(item) {
+  if (item.nextStep === null) return null;
+  return clip(
+    `Help me with the next step of my case ${caseName(item)}: ${stepWithDetails(item.nextStep)}. Do what you can, and tell me what you need from me.`,
+  );
+}
+
+/**
+ * The text of "Mark the step as done…". The widget only reads, so it asks Eva in a chat, and the
+ * person sends the text. Null when the case has no next step.
+ */
+export function markDoneText(item) {
+  if (item.nextStep === null) return null;
+  return clip(
+    `I did the next step of my case ${caseName(item)}: ${item.nextStep.text}. Mark it as done in the case, and write down the new next step if there is one.`,
+  );
+}
+
+/**
+ * The entries of the menu of a case, for the asks that Eva allows (`["chat", "open"]`, from her
+ * answer to `hello`). Each is `{ id, label, ask, path }` or `{ id, label, ask, text }`. Empty when
+ * Eva allows nothing: then the case is not a button.
+ */
+export function menuEntries(item, allowed) {
+  const entries = [];
+  if (allowed.includes("open") && item.path !== null) {
+    entries.push({ id: "open", label: "Open the case", ask: "open", path: item.path });
+  }
+  if (allowed.includes("chat")) {
+    entries.push({ id: "chat", label: "Start a chat about this case", ask: "chat", text: chatAboutText(item) });
+    const help = nextStepHelpText(item);
+    if (help !== null) entries.push({ id: "help", label: "Ask Eva to do the next step", ask: "chat", text: help });
+    const done = markDoneText(item);
+    if (done !== null) entries.push({ id: "done", label: "Mark the step as done…", ask: "chat", text: done });
+  }
+  return entries;
+}
+
+// --- The overview of the large sizes ------------------------------------------------------------
+
+/** True when the next step of the case waits for the person: it names nobody else. */
+export function waitsForMe(item) {
+  return item.nextStep !== null && item.nextStep.waitingFor === null;
+}
+
+/**
+ * The statistics of the large sizes, only from the data that Eva sends: `{ open, overdue,
+ * dueSoon, waitsForMe, waitsForOthers, nearestDeadline }`. `dueSoon` counts the steps due within
+ * the days of the warn pill, from today. `nearestDeadline` is `{ item, state }` or null; a passed
+ * deadline wins, as on the pill, so a loss never hides.
+ */
+export function caseStats(cases, today) {
+  const stats = { open: cases.length, overdue: 0, dueSoon: 0, waitsForMe: 0, waitsForOthers: 0, nearestDeadline: null };
+  for (const item of cases) {
+    if (item.nextStep !== null) {
+      if (item.nextStep.waitingFor === null) stats.waitsForMe += 1;
+      else stats.waitsForOthers += 1;
+      const due = dueState(item.nextStep.dueDate, today);
+      if (due?.overdue) stats.overdue += 1;
+      else if (due !== null && due.days !== null && due.days <= dueWording.soonDays) stats.dueSoon += 1;
+    }
+    const deadline = deadlineState(item.deadline?.date ?? null, today);
+    if (deadline === null || deadline.days === null) continue;
+    if (stats.nearestDeadline === null || deadline.days < stats.nearestDeadline.state.days) {
+      stats.nearestDeadline = { item, state: deadline };
+    }
+  }
+  return stats;
+}
+
+/**
+ * The cases in groups, for a choice of the large sizes. `urgency`: one group with no title, in
+ * Eva's order. `waiting`: the steps that wait for me, then one group for each other person in the
+ * order Eva's cases first name them, then the cases with no next step. Each group keeps Eva's order.
+ */
+export function groupCases(cases, mode) {
+  if (mode !== "waiting") return [{ key: "all", title: null, cases }];
+  const groups = new Map([["me", { key: "me", title: "Waits for me", cases: [] }]]);
+  const none = { key: "none", title: "No next step", cases: [] };
+  for (const item of cases) {
+    if (item.nextStep === null) {
+      none.cases.push(item);
+      continue;
+    }
+    const who = item.nextStep.waitingFor;
+    const key = who === null ? "me" : `person:${who.trim().toLowerCase()}`;
+    if (!groups.has(key)) groups.set(key, { key, title: `Waits for ${who.trim()}`, cases: [] });
+    groups.get(key).cases.push(item);
+  }
+  return [...groups.values(), none].filter((group) => group.cases.length > 0);
 }
