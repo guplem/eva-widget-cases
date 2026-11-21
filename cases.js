@@ -260,20 +260,29 @@ export function markDoneText(item) {
 
 /**
  * The entries of the menu of a case, for the asks that Eva allows (`["chat", "open"]`, from her
- * answer to `hello`). Each is `{ id, label, ask, path }` or `{ id, label, ask, text }`. Empty when
+ * answer to `hello`). Each is `{ id, label, short, ask, path }` or `{ id, label, short, ask, text }`;
+ * `short` is the label of the one-line menu of the header slot. Empty when
  * Eva allows nothing: then the case is not a button.
  */
 export function menuEntries(item, allowed) {
   const entries = [];
   if (allowed.includes("open") && item.path !== null) {
-    entries.push({ id: "open", label: "Open the case", ask: "open", path: item.path });
+    entries.push({ id: "open", label: "Open the case", short: "Open", ask: "open", path: item.path });
   }
   if (allowed.includes("chat")) {
-    entries.push({ id: "chat", label: "Start a chat about this case", ask: "chat", text: chatAboutText(item) });
+    entries.push({
+      id: "chat",
+      label: "Start a chat about this case",
+      short: "Chat",
+      ask: "chat",
+      text: chatAboutText(item),
+    });
     const help = nextStepHelpText(item);
-    if (help !== null) entries.push({ id: "help", label: "Ask Eva to do the next step", ask: "chat", text: help });
+    if (help !== null)
+      entries.push({ id: "help", label: "Ask Eva to do the next step", short: "Next step", ask: "chat", text: help });
     const done = markDoneText(item);
-    if (done !== null) entries.push({ id: "done", label: "Mark the step as done…", ask: "chat", text: done });
+    if (done !== null)
+      entries.push({ id: "done", label: "Mark the step as done…", short: "Done…", ask: "chat", text: done });
   }
   return entries;
 }

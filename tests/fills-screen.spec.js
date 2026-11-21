@@ -5,13 +5,14 @@ import { expect, test } from "@playwright/test";
 const viewports = [
   { width: 160, height: 160 },
   { width: 320, height: 200 },
+  { width: 480, height: 70 },
   { width: 375, height: 667 },
   { width: 800, height: 400 },
   { width: 1280, height: 800 },
   { width: 1920, height: 1080 },
 ];
 
-for (const size of ["small", "medium", "large", "tall", "xlarge", "full"]) {
+for (const size of ["small", "medium", "large", "tall", "xlarge", "full", "header"]) {
   for (const viewport of viewports) {
     test(`size ${size} fills ${String(viewport.width)} x ${String(viewport.height)}`, async ({ page }) => {
       await page.setViewportSize(viewport);

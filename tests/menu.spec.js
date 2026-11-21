@@ -167,6 +167,9 @@ const frames = [
   { size: "medium", width: 358, height: 340 },
   { size: "full", width: 390, height: 824 },
   { size: "full", width: 1280, height: 800 },
+  { size: "header", width: 320, height: 64 },
+  { size: "header", width: 480, height: 70 },
+  { size: "header", width: 358, height: 168 },
 ];
 
 for (const { size, width, height } of frames) {
@@ -188,3 +191,18 @@ for (const { size, width, height } of frames) {
     expect(inCorner).toBe(false);
   });
 }
+
+test("in the header slot, the menu is one row of short labels, with arrows left and right", async ({ page }) => {
+  await page.setViewportSize({ width: 480, height: 70 });
+  const frame = await openInFakeEva(page, { size: "header" });
+  await frame.locator(".case-button").focus();
+  await page.keyboard.press("Enter");
+  const menu = frame.getByRole("menu");
+  await expect(menu).toHaveAttribute("aria-orientation", "horizontal");
+  await expect(menu.getByRole("menuitem")).toHaveText(["Open", "Chat", "Next step", "Done…"]);
+  await expect(menu.getByRole("menuitem", { name: "Start a chat about this case" })).toHaveCount(1);
+  await page.keyboard.press("ArrowRight");
+  await expect(menu.getByRole("menuitem").nth(1)).toBeFocused();
+  await page.keyboard.press("Enter");
+  await expect.poll(() => sentAsks(page)).toEqual([expect.objectContaining({ ask: "chat" })]);
+});

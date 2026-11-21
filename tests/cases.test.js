@@ -241,7 +241,7 @@ test("the menu offers only the entries that Eva allows and the case supports", (
   assert.deepEqual(ids(withStep, []), []);
   assert.deepEqual(ids(aCase({ path: null }), ["chat", "open"]), ["chat"]);
   const [open, chat] = menuEntries(withStep, ["chat", "open"]);
-  assert.deepEqual(open, { id: "open", label: "Open the case", ask: "open", path: "Life/Cases/leak" });
+  assert.deepEqual(open, { id: "open", label: "Open the case", short: "Open", ask: "open", path: "Life/Cases/leak" });
   assert.equal(chat.label, "Start a chat about this case");
   assert.equal(chat.ask, "chat");
   assert.equal(chat.text, chatAboutText(withStep));

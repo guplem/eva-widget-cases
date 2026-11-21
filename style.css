@@ -638,3 +638,119 @@ button {
 .waits.mine {
   color: var(--ink, #1f2430);
 }
+
+/* --- Header: one line beside Eva's greeting ---------------------------------------------------- */
+
+/* The title, the count and the most urgent case sit in one row, left of Eva's corner button. */
+.widget[data-size="header"] {
+  flex-direction: row;
+  align-items: stretch;
+  gap: 12px;
+  padding-right: var(--corner);
+}
+
+.widget[data-size="header"] .widget-header {
+  flex: none;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 0;
+  min-height: 0;
+  padding-right: 0;
+}
+
+.widget[data-size="header"] .widget-title {
+  font-size: 16px;
+}
+
+.widget[data-size="header"] .widget-summary {
+  flex: none;
+  text-align: left;
+  font-size: 12px;
+}
+
+.widget[data-size="header"] .widget-body {
+  justify-content: center;
+  min-width: 0;
+}
+
+.headline {
+  --case-pad: 6px 10px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 2px;
+  min-width: 0;
+  max-height: 100%;
+  border-radius: 12px;
+  background: var(--chip, #eef0f5);
+  padding: var(--case-pad);
+  overflow: hidden;
+}
+
+.headline .case-top {
+  align-items: center;
+}
+
+.headline .case-title {
+  flex: 0 1 auto;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.headline .line span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* One line in the slot of a computer; a phone's taller frame shows the next step too. */
+@media (max-height: 110px) {
+  .headline .line {
+    display: none;
+  }
+
+  .headline .case-top {
+    flex-wrap: nowrap;
+  }
+
+  .headline .case-title {
+    min-width: 3em;
+  }
+}
+
+.widget[data-size="header"] .empty {
+  flex-direction: row;
+  gap: 8px;
+  padding: 4px 10px;
+}
+
+.widget[data-size="header"] .empty .icon,
+.widget[data-size="header"] .empty p {
+  display: none;
+}
+
+/* The menu of a short frame: one row over the widget, left of Eva's corner button. */
+.menu.strip {
+  top: 50%;
+  right: var(--corner);
+  left: 6px;
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: center;
+  width: auto;
+  min-width: 0;
+  max-width: none;
+  max-height: calc(100vh - 12px);
+  overflow-x: hidden;
+  overflow-y: auto;
+  transform: translateY(-50%);
+}
+
+.menu.strip .menu-item {
+  flex: none;
+  gap: 6px;
+  min-height: 36px;
+  white-space: nowrap;
+}

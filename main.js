@@ -19,7 +19,7 @@ import {
   waitsForMe,
 } from "./cases.js";
 
-const sizes = ["small", "medium", "large", "tall", "xlarge", "full"];
+const sizes = ["small", "medium", "large", "tall", "xlarge", "full", "header"];
 const detailedSizes = ["large", "xlarge", "full"];
 /** The day words change at midnight, so the widget reads the cases again this often. */
 const refreshMs = 10 * 60 * 1000;
@@ -38,6 +38,8 @@ const noAnswerText = "Eva did not answer. Try again.";
 /** The square at the top right that the widget contract keeps free for Eva's buttons. */
 const corner = 56;
 const menuMargin = 8;
+/** A wide frame lower than this, such as the header slot, shows the menu as one row. */
+const stripBelow = 180;
 
 const root = document.querySelector(".widget");
 const summaryElement = root.querySelector('[data-role="summary"]');
@@ -210,6 +212,24 @@ function focusCase(cases, today) {
   );
 }
 
+/**
+ * The header slot beside Eva's greeting: one line with the most urgent case and its nearest day.
+ * A taller frame, as on a phone, also shows the next step.
+ */
+function headlineCase(cases, today) {
+  const [first] = cases;
+  const day = pillOf(first, today);
+  return withMenu(
+    element(
+      "div",
+      "headline",
+      element("span", "case-top", element("b", "case-title", first.title), day === null ? null : pill(day)),
+      stepLine(first),
+    ),
+    first,
+  );
+}
+
 /** A state with no case: what it means, and how to ask Eva for a first case. */
 function emptyState(title, text) {
   return element("div", "empty", icon("folder"), element("strong", "", title), element("p", "", text));
@@ -281,13 +301,22 @@ function placeMenu(menu, button, point) {
 
 function openMenu(button, item, entries, point) {
   closeMenu();
-  const menu = element("div", "menu");
+  // A frame too short for a list, such as the header slot, gets the menu as one row of short labels.
+  const strip = window.innerHeight < stripBelow && window.innerWidth > 2 * window.innerHeight;
+  const menu = element("div", strip ? "menu strip" : "menu");
   menu.setAttribute("role", "menu");
+  if (strip) menu.setAttribute("aria-orientation", "horizontal");
   menu.setAttribute("aria-label", item.title);
   const entryIcons = { open: "open", chat: "chat", help: "spark", done: "check" };
   const items = entries.map((entry) => {
-    const choice = element("button", "menu-item", icon(entryIcons[entry.id]), element("span", "", entry.label));
+    const choice = element(
+      "button",
+      "menu-item",
+      icon(entryIcons[entry.id]),
+      element("span", "", strip ? entry.short : entry.label),
+    );
     choice.type = "button";
+    if (strip) choice.setAttribute("aria-label", entry.label);
     choice.setAttribute("role", "menuitem");
     choice.dataset.entry = entry.id;
     choice.addEventListener("click", () => {
@@ -304,7 +333,12 @@ function openMenu(button, item, entries, point) {
   menu.append(...items);
   menu.addEventListener("keydown", (event) => {
     const index = items.indexOf(document.activeElement);
-    const moves = { ArrowDown: index + 1, ArrowUp: index - 1, Home: 0, End: items.length - 1 };
+    const moves = {
+      [strip ? "ArrowRight" : "ArrowDown"]: index + 1,
+      [strip ? "ArrowLeft" : "ArrowUp"]: index - 1,
+      Home: 0,
+      End: items.length - 1,
+    };
     if (event.key in moves) {
       event.preventDefault();
       items[(moves[event.key] + items.length) % items.length].focus();
@@ -316,7 +350,7 @@ function openMenu(button, item, entries, point) {
     }
   });
   root.append(menu);
-  placeMenu(menu, button, point);
+  if (!strip) placeMenu(menu, button, point);
   button.setAttribute("aria-expanded", "true");
   openState = { menu, button };
   items[0].focus();
@@ -502,6 +536,10 @@ function render() {
   }
   if (size === "small") {
     bodyElement.replaceChildren(focusCase(cases, today));
+    return;
+  }
+  if (size === "header") {
+    bodyElement.replaceChildren(headlineCase(cases, today));
     return;
   }
   if (detailed) {

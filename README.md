@@ -11,6 +11,7 @@ The demo uses mock data, with dates that count from today.
 - **The tall and the medium card** show as many cases as fit. Each case has its title, a pill for its nearest day, its next step and who that step waits for. A longer list scrolls inside the card.
 - **The large card, the extra large card and full screen** show every open case: its steps done, its next step, who it waits for (you or someone else), the day the step is due, and the deadline with what you lose when it passes. Above the list, a few numbers help you pick what to do today: the overdue steps, the steps due in the next 7 days, the steps that wait for you and those that wait for other people, and the nearest deadline with its case. You can group the cases **by urgency** (Eva's order) or **by who they wait for** (you first, then each person, then the cases with no next step), and show only the cases that **wait for you**. The choices last until the page reloads.
 - **The small card** shows the most urgent case, its next step and how many other cases are open.
+- **The header slot** beside Eva's greeting (`header`, contract 3) shows the most urgent case and its nearest day in one line, and its next step too in the taller frame of a phone. There the menu is one row of short labels.
 - The words and the colours are those of the Cases page of Eva:
   - "Due today", "Due tomorrow", "Due in 5 days": the step is near, in the warn colour.
   - "Overdue by 1 day", with an alert icon: the step is late. It still waits for you, so it keeps the warn colour.
@@ -79,7 +80,7 @@ npm install
 npm start
 ```
 
-Then open http://localhost:3000/. Add `?size=small`, `medium`, `tall`, `large`, `xlarge` or `full` to the address to see each size.
+Then open http://localhost:3000/. Add `?size=small`, `medium`, `tall`, `large`, `xlarge`, `full` or `header` to the address to see each size.
 
 ## Change it
 
