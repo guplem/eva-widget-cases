@@ -24,6 +24,7 @@ button {
   --corner: 56px;
   --pad: clamp(8px, 3vmin, 24px);
   --gap: clamp(4px, 1.5vmin, 14px);
+  position: relative;
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
@@ -73,6 +74,13 @@ button {
   min-height: 0;
 }
 
+/* In the large sizes, the statistics and the list scroll together, so a short card shows both. */
+.widget-body.detailed {
+  gap: 10px;
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
 .icon {
   flex: none;
   width: 1.1em;
@@ -101,12 +109,13 @@ button {
 }
 
 .case {
+  --case-pad: 8px 12px;
   display: flex;
   flex: none;
   flex-direction: column;
   gap: 3px;
   min-width: 0;
-  padding: 8px 12px;
+  padding: var(--case-pad);
   border-radius: 14px;
   background: var(--chip, #eef0f5);
 }
@@ -219,8 +228,8 @@ button {
 }
 
 .cases.detailed .case {
+  --case-pad: 12px 14px;
   gap: 6px;
-  padding: 12px 14px;
 }
 
 .cases.detailed .case-title {
@@ -267,7 +276,8 @@ button {
   display: flex;
   flex: 1;
   flex-direction: column;
-  justify-content: center;
+  /* Safe: a case too tall for the card keeps its title, and only its end is cut. */
+  justify-content: safe center;
   gap: clamp(3px, 1.5vmin, 10px);
   min-height: 0;
   overflow: hidden;
@@ -361,4 +371,397 @@ button {
 .widget[data-size="full"] .line,
 .widget[data-size="full"] .cost {
   font-size: 14px;
+}
+
+.widget[data-size="full"] .stat-value {
+  font-size: 24px;
+}
+
+.widget[data-size="full"] .stat-label {
+  font-size: 13px;
+}
+
+/* --- The menu of a case ------------------------------------------------------------------------ */
+
+/* The whole case is the button: its parts keep their look, and the button takes the padding. */
+.has-menu {
+  padding: 0;
+}
+
+.case-button {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: inherit;
+  width: 100%;
+  min-width: 0;
+  margin: 0;
+  padding: var(--case-pad, 0);
+  border: none;
+  border-radius: inherit;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/*
+ * The button fills the small card and centres its parts. It may not grow past the card: a centred
+ * overflow would slide its top under the header.
+ */
+.focus.has-menu {
+  justify-content: stretch;
+}
+
+.focus.has-menu > .case-button {
+  justify-content: safe center;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.case-button:hover,
+.case-button[aria-expanded="true"] {
+  background: color-mix(in oklch, var(--ink, #1f2430) 6%, transparent);
+}
+
+.case-button:focus-visible,
+.menu-item:focus-visible,
+.toggle:focus-visible {
+  outline: 2px solid var(--accent, #3b82f6);
+  outline-offset: -2px;
+}
+
+.menu {
+  position: fixed;
+  z-index: 10;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  width: max-content;
+  min-width: min(200px, calc(100vw - 16px));
+  max-width: min(280px, calc(100vw - 16px));
+  max-height: calc(100vh - 16px);
+  padding: 4px;
+  overflow-y: auto;
+  border: 1px solid var(--line, #d9dce5);
+  border-radius: 12px;
+  background: var(--panel, #ffffff);
+  box-shadow: 0 8px 24px color-mix(in oklch, #000000 22%, transparent);
+}
+
+.menu-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  /* A finger hits it on a phone. */
+  min-height: 40px;
+  padding: 6px 10px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  font-size: 13.5px;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+}
+
+.menu-item:hover,
+.menu-item:focus-visible {
+  background: var(--chip, #eef0f5);
+}
+
+.menu-item .icon {
+  color: var(--muted, #5d6475);
+}
+
+.notice {
+  position: absolute;
+  right: var(--pad);
+  bottom: var(--pad);
+  left: var(--pad);
+  z-index: 11;
+  margin: 0;
+  padding: 8px 12px;
+  border-radius: 10px;
+  background: var(--ink, #1f2430);
+  color: var(--panel, #ffffff);
+  font-size: 12.5px;
+  font-weight: 600;
+  line-height: 1.35;
+}
+
+.notice[hidden] {
+  display: none;
+}
+
+/* --- The overview of the large sizes: statistics and the choices of the list ------------------- */
+
+.overview {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.stat {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  justify-content: center;
+  gap: 2px;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+  padding: 6px 10px;
+  border: 1px solid var(--line, #d9dce5);
+  border-radius: 12px;
+}
+
+.stat-value {
+  font-size: 20px;
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+}
+
+.stat.warn .stat-value {
+  color: color-mix(in oklab, var(--warn, #9a6b00) 70%, var(--ink, #1f2430));
+}
+
+.stat.zero .stat-value {
+  color: var(--muted, #5d6475);
+  font-weight: 600;
+}
+
+.stat-label {
+  overflow: hidden;
+  color: var(--muted, #5d6475);
+  font-size: 12px;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* The nearest deadline names its case, so it takes more room. */
+.stat.nearest {
+  flex-grow: 2;
+  align-items: flex-start;
+}
+
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 10px;
+}
+
+.segmented {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px;
+  padding: 2px;
+  border-radius: 999px;
+  background: var(--chip, #eef0f5);
+}
+
+.toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-height: 30px;
+  padding: 4px 12px;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--muted, #5d6475);
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.toggle .icon {
+  width: 13px;
+  height: 13px;
+}
+
+.segmented .toggle[aria-pressed="true"] {
+  background: var(--panel, #ffffff);
+  color: var(--ink, #1f2430);
+  box-shadow: 0 1px 2px color-mix(in oklch, #000000 14%, transparent);
+}
+
+.toolbar > .toggle {
+  border-color: var(--line, #d9dce5);
+}
+
+.toolbar > .toggle[aria-pressed="true"] {
+  border-color: transparent;
+  background: var(--soft, #e6efff);
+  color: var(--soft-ink, #1e3a8a);
+}
+
+.group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.group-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 4px 0 0;
+  color: var(--muted, #5d6475);
+  font-size: 13px;
+}
+
+.group-count {
+  padding: 0 7px;
+  border-radius: 999px;
+  background: var(--chip, #eef0f5);
+  font-size: 12px;
+}
+
+.filtered-empty {
+  margin: 0;
+  padding: 12px;
+  border-radius: 14px;
+  background: var(--chip, #eef0f5);
+  color: var(--muted, #5d6475);
+  font-size: 13px;
+  text-align: center;
+}
+
+/* The detailed list grows with its cases: the body around it scrolls. */
+.widget-body.detailed .cases.detailed {
+  flex: none;
+  overflow: visible;
+}
+
+.waits.mine {
+  color: var(--ink, #1f2430);
+}
+
+/* --- Header: one line beside Eva's greeting ---------------------------------------------------- */
+
+/* The title, the count and the most urgent case sit in one row, left of Eva's corner button. */
+.widget[data-size="header"] {
+  flex-direction: row;
+  align-items: stretch;
+  gap: 12px;
+  padding-right: var(--corner);
+}
+
+.widget[data-size="header"] .widget-header {
+  flex: none;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 0;
+  min-height: 0;
+  padding-right: 0;
+}
+
+.widget[data-size="header"] .widget-title {
+  font-size: 16px;
+}
+
+.widget[data-size="header"] .widget-summary {
+  flex: none;
+  text-align: left;
+  font-size: 12px;
+}
+
+.widget[data-size="header"] .widget-body {
+  justify-content: center;
+  min-width: 0;
+}
+
+.headline {
+  --case-pad: 6px 10px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 2px;
+  min-width: 0;
+  max-height: 100%;
+  border-radius: 12px;
+  background: var(--chip, #eef0f5);
+  padding: var(--case-pad);
+  overflow: hidden;
+}
+
+.headline .case-top {
+  align-items: center;
+}
+
+.headline .case-title {
+  flex: 0 1 auto;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.headline .line span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* One line in the slot of a computer; a phone's taller frame shows the next step too. */
+@media (max-height: 110px) {
+  .headline .line {
+    display: none;
+  }
+
+  .headline .case-top {
+    flex-wrap: nowrap;
+  }
+
+  .headline .case-title {
+    min-width: 3em;
+  }
+}
+
+.widget[data-size="header"] .empty {
+  flex-direction: row;
+  gap: 8px;
+  padding: 4px 10px;
+}
+
+.widget[data-size="header"] .empty .icon,
+.widget[data-size="header"] .empty p {
+  display: none;
+}
+
+/* The menu of a short frame: one row over the widget, left of Eva's corner button. */
+.menu.strip {
+  top: 50%;
+  right: var(--corner);
+  left: 6px;
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: center;
+  width: auto;
+  min-width: 0;
+  max-width: none;
+  max-height: calc(100vh - 12px);
+  overflow-x: hidden;
+  overflow-y: auto;
+  transform: translateY(-50%);
+}
+
+.menu.strip .menu-item {
+  flex: none;
+  gap: 6px;
+  min-height: 36px;
+  white-space: nowrap;
 }

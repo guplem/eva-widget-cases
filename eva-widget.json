@@ -1,5 +1,5 @@
 {
-  "contract": 2,
+  "contract": 3,
   "name": "Cases",
   "entry": "index.html",
   "size": "tall",
@@ -14,5 +14,15 @@
     }
   ],
   "hosts": [],
+  "asks": [
+    {
+      "type": "open",
+      "why": "\"Open the case\" in the menu of a case opens the case's own page in Eva."
+    },
+    {
+      "type": "chat",
+      "why": "\"Start a chat about this case\", \"Ask Eva to do the next step\" and \"Mark the step as done\" put a short text about the case into your message box. You read it and send it yourself."
+    }
+  ],
   "prompt": "The Cases widget shows each open case on the home page, with its next step, the day that step is due and the deadline. Keep them current in the note of each case."
 }

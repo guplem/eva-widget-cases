@@ -88,6 +88,18 @@ test("a small card with one case says that no other case is open", async ({ page
   await expect(page.locator(".focus .more")).toHaveText("No other open case");
 });
 
+test("the header slot shows the most urgent case and its day in one line", async ({ page }) => {
+  await page.setViewportSize({ width: 480, height: 70 });
+  await fakeEvaCases(page, evaCases);
+  await page.goto("/?size=header");
+  await expect(page.locator(".headline .case-title")).toHaveText("Fix the bathroom leak");
+  await expect(page.locator(".headline .pill")).toHaveText("Overdue by 1 day");
+  await expect(page.locator(".headline .step")).toBeHidden();
+  await expect(page.locator('[data-role="summary"]')).toHaveText("3 open");
+  await page.setViewportSize({ width: 358, height: 168 });
+  await expect(page.locator(".headline .step")).toBeVisible();
+});
+
 for (const size of ["large", "xlarge", "full"]) {
   test(`a ${size} card shows every case with its steps, its deadline and the cost`, async ({ page }) => {
     await fakeEvaCases(page, evaCases);

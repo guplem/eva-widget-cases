@@ -89,12 +89,15 @@ const frames = [
   { width: 203, height: 400 },
   { width: 240, height: 520 },
   { width: 390, height: 168 },
+  // The header slot beside Eva's greeting, on a computer.
+  { width: 480, height: 70 },
+  { width: 640, height: 76 },
   { width: 390, height: 824 },
   { width: 800, height: 400 },
   { width: 1280, height: 800 },
 ];
 
-for (const size of ["small", "medium", "large", "tall", "xlarge", "full"]) {
+for (const size of ["small", "medium", "large", "tall", "xlarge", "full", "header"]) {
   for (const frame of frames) {
     test(`size ${size} keeps the top right corner free at ${String(frame.width)} x ${String(frame.height)}`, async ({
       page,
