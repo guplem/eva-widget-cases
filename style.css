@@ -276,7 +276,8 @@ button {
   display: flex;
   flex: 1;
   flex-direction: column;
-  justify-content: center;
+  /* Safe: a case too tall for the card keeps its title, and only its end is cut. */
+  justify-content: safe center;
   gap: clamp(3px, 1.5vmin, 10px);
   min-height: 0;
   overflow: hidden;
@@ -404,8 +405,18 @@ button {
   -webkit-tap-highlight-color: transparent;
 }
 
+/*
+ * The button fills the small card and centres its parts. It may not grow past the card: a centred
+ * overflow would slide its top under the header.
+ */
+.focus.has-menu {
+  justify-content: stretch;
+}
+
 .focus.has-menu > .case-button {
-  justify-content: center;
+  justify-content: safe center;
+  min-height: 0;
+  overflow: hidden;
 }
 
 .case-button:hover,
