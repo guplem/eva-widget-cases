@@ -100,6 +100,20 @@ test("the header slot shows the most urgent case and its day in one line", async
   await expect(page.locator(".headline .step")).toBeVisible();
 });
 
+test("the narrowest header slot (330 x 72) shows the whole day of the case", async ({ page }) => {
+  await page.setViewportSize({ width: 330, height: 72 });
+  await fakeEvaCases(page, [{ ...evaCases[0], nextStep: { ...evaCases[0].nextStep, dueDate: "2025-03-20" } }]);
+  await page.goto("/?size=header");
+  const pill = page.locator(".headline .pill");
+  await expect(pill).toContainText("Overdue by");
+  const cut = await pill.evaluate((node) => {
+    const own = node.getBoundingClientRect();
+    const card = node.closest(".headline").getBoundingClientRect();
+    return own.right - card.right;
+  });
+  expect(cut).toBeLessThanOrEqual(0.5);
+});
+
 for (const size of ["large", "xlarge", "full"]) {
   test(`a ${size} card shows every case with its steps, its deadline and the cost`, async ({ page }) => {
     await fakeEvaCases(page, evaCases);
