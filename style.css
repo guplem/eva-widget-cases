@@ -731,6 +731,13 @@ button {
   }
 }
 
+/* The narrowest slot needs the room of the title for the case and its day: the case says enough. */
+@media (max-width: 380px) and (max-height: 110px) {
+  .widget[data-size="header"] .widget-header {
+    display: none;
+  }
+}
+
 .widget[data-size="header"] .empty {
   flex-direction: row;
   gap: 8px;
